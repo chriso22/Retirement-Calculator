@@ -35,7 +35,7 @@ dl{display:grid;grid-template-columns:1fr auto;gap:8px 16px;margin:0}
 dt{color:var(--mute)}
 dd{margin:0;text-align:right;font-weight:500;font-variant-numeric:tabular-nums}
 dt,dd{white-space:nowrap}
-@media (max-width:480px){main{padding:18px 10px 36px}.panel{padding:14px 12px}dl{gap:6px 10px;font-size:.84rem}.hero .big{font-size:2.1rem}h1{font-size:1.4rem}}
+@media (max-width:480px){main{padding:18px 10px 36px}.panel{padding:14px 12px}dl{gap:6px 10px;font-size:.84rem}dt{white-space:normal}.hero .big{font-size:2.1rem}h1{font-size:1.4rem}}
 @media (max-width:350px){dl{font-size:.76rem}}
 .chart{overflow-x:auto;margin-top:20px}
 svg{display:block;width:100%;min-width:420px;height:auto}
@@ -114,7 +114,7 @@ var left=s2*I(M+R);
 $("heroNum").textContent=usd(w0);
 $("heroLbl").textContent="per month for "+L+" years, in today's dollars and rising with inflation"+""+". This uses all of your savings.";
 var status=run>=0?"Runs out after "+Math.floor(run/12)+" yr "+(run%12)+" mo":"Lasts all "+L+" years";
-var rows=[["Savings at retirement (future $)",usd(VT)],["Worth in today's dollars",usd(VT/Math.pow(b,M))],["Total you add over "+T+" years",usd(tot)],["Max spending at retirement (future $)",usd(w0*Math.pow(b,M))+"/mo"],["Max spending, forever",fw===null?"Not possible":usd(fw)+" today"],["Spending tested",usd(tw)+"/mo"+(target>0?"":" (max)")],["At retirement (future $)",usd(tw*Math.pow(b,M))+"/mo"],["Result",status],["Left over (future $)",run>=0?"None":usd(left)],["Left over (today's $)",run>=0?"None":usd(left/Math.pow(b,M+R))]];
+var rows=[["Savings at retirement (future $)",usd(VT)],["Worth in today's dollars",usd(VT/Math.pow(b,M))],["Total added over "+T+" years",usd(tot)],["Max at retirement (future $)",usd(w0*Math.pow(b,M))+"/mo"],["Max spending, forever",fw===null?"Not possible":usd(fw)+" today"],["Spending tested",usd(tw)+"/mo"+(target>0?"":" (max)")],["At retirement (future $)",usd(tw*Math.pow(b,M))+"/mo"],["Result",status],["Left over (future $)",run>=0?"None":usd(left)],["Left over (today's $)",run>=0?"None":usd(left/Math.pow(b,M+R))]];
 $("out").innerHTML=rows.map(function(x){return"<dt>"+x[0]+"</dt><dd>"+x[1]+"</dd>"}).join("");
 var tot2=pts.length-1,W=640,H=240,pl=52,pb=28,pt=12,pr=10,mx=Math.max.apply(null,pts)||1;
 function X(k){return pl+(W-pl-pr)*k/tot2}function Y(y){return pt+(H-pt-pb)*(1-y/mx)}
