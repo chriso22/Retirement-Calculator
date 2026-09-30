@@ -2,7 +2,7 @@
 
 How much can you spend each month in retirement, and will your savings last? Enter what you have saved today, a monthly amount you will add until you retire, and how many years the money has to last. The calculator shows the monthly spending that covers those years and whether anything is left over.
 
-**Live:** add your GitHub Pages link here once it is published.
+**Live:** https://retirement-calculator-190.pages.dev
 
 ## What it models
 
@@ -25,7 +25,6 @@ Everything runs in monthly steps.
 | Years until retirement | How long you keep contributing |
 | Raise contributions with inflation | Optional. Grows the contribution by the inflation rate |
 | Years the money must last | Length of retirement |
-| Other income per month | Social Security or a pension, in today's dollars, starting at retirement |
 | Spending to test per month | In today's dollars. Leave at 0 to test the maximum |
 | Return before / in retirement | Projected annual returns for each phase |
 | Inflation per year | Applied to spending (and to contributions, if the option is on) |
@@ -47,7 +46,7 @@ Spending forever only works if your in-retirement return outpaces inflation by e
 
 ## What it does not model
 
-It assumes returns are constant. Real markets swing, so a projection can be right about the average and still wrong about the path. There is no volatility or sequence-of-returns risk, no progressive tax brackets, no early-withdrawal penalties, no required minimum distributions, no Social Security start ages, and no investment fees. Treat the results as scenarios, not forecasts. This is arithmetic, not financial advice.
+It assumes returns are constant. Real markets swing, so a projection can be right about the average and still wrong about the path. There is no volatility or sequence-of-returns risk, no progressive tax brackets, no early-withdrawal penalties, no required minimum distributions, no Social Security or pension income, and no investment fees. Treat the results as scenarios, not forecasts. This is arithmetic, not financial advice.
 
 ## Run it locally
 
