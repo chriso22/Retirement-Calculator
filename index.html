@@ -47,11 +47,13 @@ label.chk{display:flex;gap:8px;align-items:center}
 .hero{margin-bottom:16px}
 .hero .big{font-size:2.6rem;font-weight:600;color:var(--acc);line-height:1.1;font-variant-numeric:tabular-nums}
 .hero p{margin:4px 0 0;color:var(--mute)}
+.hero-test{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);color:var(--ink);font-size:.95rem;line-height:1.4}
+.hero-test .lbl{color:var(--mute)}
 dl{display:grid;grid-template-columns:1fr auto;gap:8px 16px;margin:0}
 dt{color:var(--mute)}
 dd{margin:0;text-align:right;font-weight:500;font-variant-numeric:tabular-nums}
 dt,dd{white-space:nowrap}
-@media (max-width:480px){main{padding:18px 10px 36px}.panel{padding:14px 12px}dl{gap:6px 10px;font-size:.84rem}dt{white-space:normal}.hero .big{font-size:2.1rem}h1{font-size:1.4rem}.theme button{padding:7px 8px;font-size:.78rem}}
+@media (max-width:480px){main{padding:18px 10px 36px}.panel{padding:14px 12px}dl{gap:6px 10px;font-size:.84rem}dt{white-space:normal}.hero .big{font-size:2.1rem}h1{font-size:1.4rem}.theme button{padding:7px 8px;font-size:.78rem}.hero-test{font-size:.9rem}}
 @media (max-width:350px){dl{font-size:.76rem}}
 .chart{overflow-x:auto;margin-top:20px}
 svg{display:block;width:100%;min-width:420px;height:auto}
@@ -85,6 +87,7 @@ svg{display:block;width:100%;min-width:420px;height:auto}
 </fieldset>
 <fieldset><legend>Retirement</legend>
 <label>Years the money must last<input id="len" type="number" min="1" max="100" step="1" value="30"></label>
+<label>Other monthly income in retirement, in today's dollars ($)<input id="other" type="number" min="0" step="any" value="0"><span class="hint">Social Security, pension, etc. Assumed to start at retirement and rise with inflation.</span></label>
 <label>Spending to test per month, in today's dollars ($). Leave 0 to test the maximum.<input id="target" type="number" min="0" step="any" value="1500"></label>
 </fieldset>
 <fieldset><legend>Estimates</legend>
@@ -99,22 +102,28 @@ svg{display:block;width:100%;min-width:420px;height:auto}
 </section>
 <section aria-live="polite">
 <div class="panel">
-<div class="hero"><div class="big" id="heroNum">–</div><p id="heroLbl"></p></div>
+<div class="hero">
+<div class="big" id="heroNum">–</div>
+<p id="heroLbl"></p>
+<p class="hero-test" id="heroTest"></p>
+</div>
 <dl id="out"></dl>
 </div>
 <div class="panel chart"><strong>Your savings over time, in today's dollars</strong><div id="chart"></div></div>
-<p class="note">Constant-rate scenario math, not a forecast or advice. Real returns vary year to year, so real results can differ a lot. Contributions go in at the start of each month. Withdrawals come out on the same schedule and rise with inflation. Tax is a single flat rate you choose: on the whole withdrawal for a traditional account, on the gain above your average cost basis for a taxable account, and none for a Roth. Early-withdrawal penalties and required minimum distributions are not modeled.</p>
+<p class="note">Constant-rate scenario math, not a forecast or advice. Real returns vary year to year, so real results can differ a lot. Contributions go in at the start of each month. Withdrawals come out on the same schedule and rise with inflation. Other income (if any) also rises with inflation and reduces how much you need from savings. Tax is a single flat rate you choose: on the whole withdrawal for a traditional account, on the gain above your average cost basis for a taxable account, and none for a Roth. Early-withdrawal penalties and required minimum distributions are not modeled.</p>
 </section>
 </div>
 </main>
 <script>
 (function(){
 var $=function(i){return document.getElementById(i)};
-var ids=["acct","start","contrib","years","idx","len","target","gpre","gpost","infl","tax","basis"];
+var ids=["acct","start","contrib","years","idx","len","other","target","gpre","gpost","infl","tax","basis"];
 var THEME_KEY="rc-theme";
+var STATE_KEY="rc-state";
 var basisFollowsStart=true;
 var prevStart=null;
 var prevAcct=null;
+var saving=false;
 function v(i){var n=parseFloat($(i).value);return isFinite(n)?n:0}
 function usd(n){return isFinite(n)?"$"+Math.round(n).toLocaleString("en-US"):"–"}
 function short(n){return n>=1e6?"$"+(n/1e6).toFixed(1)+"M":"$"+Math.round(n/1e3)+"k"}
@@ -137,8 +146,47 @@ function initTheme(){
     $("theme-"+m).addEventListener("click",function(){applyTheme(m)});
   });
 }
+function readState(){
+  var out={};
+  ids.forEach(function(i){
+    out[i]=i==="idx"?($(i).checked?"1":"0"):$(i).value;
+  });
+  return out;
+}
+function applyState(state){
+  if(!state)return;
+  ids.forEach(function(i){
+    if(!(i in state)||state[i]==null)return;
+    if(i==="idx")$(i).checked=state[i]==="1"||state[i]==="true"||state[i]===true;
+    else $(i).value=String(state[i]);
+  });
+}
+function loadState(){
+  var params=new URLSearchParams(location.search),fromUrl={},hasUrl=false;
+  ids.forEach(function(i){
+    if(params.has(i)){fromUrl[i]=params.get(i);hasUrl=true;}
+  });
+  if(hasUrl){applyState(fromUrl);return "url";}
+  try{
+    var raw=localStorage.getItem(STATE_KEY);
+    if(raw){applyState(JSON.parse(raw));return "local";}
+  }catch(e){}
+  return "default";
+}
+function saveState(){
+  if(saving)return;
+  saving=true;
+  var state=readState();
+  try{localStorage.setItem(STATE_KEY,JSON.stringify(state))}catch(e){}
+  var params=new URLSearchParams();
+  ids.forEach(function(i){params.set(i,state[i])});
+  var qs=params.toString();
+  var next=location.pathname+(qs?"?"+qs:"")+location.hash;
+  if(location.pathname+location.search+location.hash!==next)history.replaceState(null,"",next);
+  saving=false;
+}
 function syncBasis(opts){
-  var startEl=$("start"),basisEl=$("basis"),startVal=v("start"),basisVal=v("basis");
+  var startEl=$("start"),basisEl=$("basis"),startVal=v("start");
   var switchingToTaxable=opts&&opts.switchingToTaxable;
   if(basisFollowsStart){
     if(startEl.value!=="")basisEl.value=startEl.value;
@@ -169,7 +217,7 @@ function onAcctChange(){
   prevAcct=type;
 }
 function calc(){
-var S0=v("start"),c=v("contrib"),T=Math.max(Math.round(v("years")),1),L=Math.max(Math.round(v("len")),1),target=v("target");
+var S0=v("start"),c=v("contrib"),T=Math.max(Math.round(v("years")),1),L=Math.max(Math.round(v("len")),1),target=v("target"),oi=Math.max(v("other"),0);
 var g=v("gpre")/100,g2=v("gpost")/100,inf=v("infl")/100,rate=v("tax")/100,basis=v("basis"),type=$("acct").value,idx=$("idx").checked;
 var a=Math.pow(1+g,1/12),a2=Math.pow(1+g2,1/12),b=Math.pow(1+inf,1/12),M=T*12,R=L*12,j,m;
 $("rowBasis").hidden=type!=="taxable";$("rowTax").hidden=type==="roth";
@@ -184,25 +232,53 @@ function net(t){var p=I(t);return p-rate*Math.max(p-bB,0)}
 function unit(t){var n=net(t);return n>0?Math.pow(b,t)/n:Infinity}
 var K=0;for(m=0;m<R;m++)K+=unit(M+m);
 var w0=UT>0&&isFinite(K)?UT/K:0;
+var wTot=w0+oi;
 var N=100*12,Ki=0;for(m=0;m<N;m++)Ki+=unit(M+m);
-var r=unit(M+N-1)/unit(M+N-2),fw=null;
-if(r<1&&isFinite(r)&&isFinite(Ki)){Ki+=unit(M+N-1)*r/(1-r);fw=UT>0?UT/Ki:0}
-var tw=target>0?target:w0,draw=tw,run=-1,s2=UT;
-for(m=0;m<R;m++){var sold=draw*unit(M+m);if(sold>s2||!isFinite(sold)){run=m;s2=0;break}s2-=sold;pts.push(s2*I(M+m+1)/Math.pow(b,M+m+1))}
+var r=unit(M+N-1)/unit(M+N-2),fw=null,fwTot=null;
+if(r<1&&isFinite(r)&&isFinite(Ki)){Ki+=unit(M+N-1)*r/(1-r);fw=UT>0?UT/Ki:0;fwTot=fw+oi}
+var testingMax=!(target>0),tw=testingMax?wTot:target,fromSav=Math.max(0,tw-oi),run=-1,s2=UT;
+for(m=0;m<R;m++){var sold=fromSav*unit(M+m);if(sold>s2||!isFinite(sold)){run=m;s2=0;break}s2-=sold;pts.push(s2*I(M+m+1)/Math.pow(b,M+m+1))}
 if(run>=0){while(pts.length<M+R+1)pts.push(0)}
 var left=s2*I(M+R);
-$("heroNum").textContent=usd(w0);
-$("heroLbl").textContent="per month for "+L+" years, in today's dollars and rising with inflation. This uses all of your savings.";
+$("heroNum").textContent=usd(wTot);
+if(oi>0){
+  $("heroLbl").textContent="max per month for "+L+" years, in today's dollars and rising with inflation ("+usd(w0)+" from savings + "+usd(oi)+" other income).";
+}else{
+  $("heroLbl").textContent="max per month for "+L+" years, in today's dollars and rising with inflation. This uses all of your savings.";
+}
 var status=run>=0?"Runs out after "+Math.floor(run/12)+" yr "+(run%12)+" mo":"Lasts all "+L+" years";
-var rows=[["Savings at retirement (future $)",usd(VT)],["Worth in today's dollars",usd(VT/Math.pow(b,M))],["Total added over "+T+" years",usd(tot)],["Max at retirement (future $)",usd(w0*Math.pow(b,M))+"/mo"],["Max spending, forever",fw===null?"Not possible":usd(fw)+" today"],["Spending tested",usd(tw)+"/mo"+(target>0?"":" (max)")],["At retirement (future $)",usd(tw*Math.pow(b,M))+"/mo"],["Result",status],["Left over (future $)",run>=0?"None":usd(left)],["Left over (today's $)",run>=0?"None":usd(left/Math.pow(b,M+R))]];
+if(testingMax){
+  $("heroTest").innerHTML="<span class=\"lbl\">Testing the maximum</span> · <strong>"+status+"</strong>";
+}else{
+  $("heroTest").innerHTML="<span class=\"lbl\">Testing "+usd(tw)+"/mo</span> · <strong>"+status+"</strong>"+(oi>0?" <span class=\"lbl\">("+usd(fromSav)+"/mo from savings)</span>":"");
+}
+var rows=[
+  ["Savings at retirement (future $)",usd(VT)],
+  ["Worth in today's dollars",usd(VT/Math.pow(b,M))],
+  ["Total added over "+T+" years",usd(tot)],
+  ["Max from savings",usd(w0)+"/mo"],
+  ["Other income",oi>0?usd(oi)+"/mo":"None"],
+  ["Max total spending",usd(wTot)+"/mo"],
+  ["Max at retirement (future $)",usd(wTot*Math.pow(b,M))+"/mo"],
+  ["Max spending, forever",fwTot===null?"Not possible":usd(fwTot)+" today"],
+  ["Spending tested",usd(tw)+"/mo"+(testingMax?" (max)":"")],
+  ["From savings",usd(fromSav)+"/mo"],
+  ["At retirement (future $)",usd(tw*Math.pow(b,M))+"/mo"],
+  ["Result",status],
+  ["Left over (future $)",run>=0?"None":usd(left)],
+  ["Left over (today's $)",run>=0?"None":usd(left/Math.pow(b,M+R))]
+];
 $("out").innerHTML=rows.map(function(x){return"<dt>"+x[0]+"</dt><dd>"+x[1]+"</dd>"}).join("");
 var tot2=pts.length-1,W=640,H=240,pl=52,pb=28,pt=12,pr=10,mx=Math.max.apply(null,pts)||1;
 function X(k){return pl+(W-pl-pr)*k/tot2}function Y(y){return pt+(H-pt-pb)*(1-y/mx)}
 var stp=Math.ceil(tot2/600),ks=[],k;for(k=0;k<=tot2;k+=stp)ks.push(k);ks.push(M);ks.push(tot2);ks=ks.sort(function(x,y){return x-y}).filter(function(x,i,r){return i===0||x!==r[i-1]});
 var d=ks.map(function(k,i){return(i?"L":"M")+X(k).toFixed(1)+" "+Y(pts[k]).toFixed(1)}).join("");
 var rx=X(M);
-$("chart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Savings by month: grows until retirement, then draws down"><line x1="'+pl+'" y1="'+(H-pb)+'" x2="'+(W-pr)+'" y2="'+(H-pb)+'" stroke="var(--line)"/><line x1="'+pl+'" y1="'+pt+'" x2="'+pl+'" y2="'+(H-pb)+'" stroke="var(--line)"/><line x1="'+rx+'" y1="'+pt+'" x2="'+rx+'" y2="'+(H-pb)+'" stroke="var(--mute)" stroke-dasharray="4 4"/><path d="'+d+'" fill="none" stroke="var(--acc)" stroke-width="2.5"/><text x="'+(pl-6)+'" y="'+(pt+10)+'" text-anchor="end" font-size="11" fill="var(--mute)">'+short(mx)+'</text><text x="'+(pl-6)+'" y="'+(H-pb)+'" text-anchor="end" font-size="11" fill="var(--mute)">$0</text><text x="'+pl+'" y="'+(H-8)+'" font-size="11" fill="var(--mute)">Today</text><text x="'+rx+'" y="'+(H-8)+'" text-anchor="middle" font-size="11" fill="var(--mute)">Retire (year '+T+')</text><text x="'+(W-pr)+'" y="'+(H-8)+'" text-anchor="end" font-size="11" fill="var(--mute)">Year '+(T+L)+'</text></svg>'}
+$("chart").innerHTML='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Savings by month: grows until retirement, then draws down"><line x1="'+pl+'" y1="'+(H-pb)+'" x2="'+(W-pr)+'" y2="'+(H-pb)+'" stroke="var(--line)"/><line x1="'+pl+'" y1="'+pt+'" x2="'+pl+'" y2="'+(H-pb)+'" stroke="var(--line)"/><line x1="'+rx+'" y1="'+pt+'" x2="'+rx+'" y2="'+(H-pb)+'" stroke="var(--mute)" stroke-dasharray="4 4"/><path d="'+d+'" fill="none" stroke="var(--acc)" stroke-width="2.5"/><text x="'+(pl-6)+'" y="'+(pt+10)+'" text-anchor="end" font-size="11" fill="var(--mute)">'+short(mx)+'</text><text x="'+(pl-6)+'" y="'+(H-pb)+'" text-anchor="end" font-size="11" fill="var(--mute)">$0</text><text x="'+pl+'" y="'+(H-8)+'" font-size="11" fill="var(--mute)">Today</text><text x="'+rx+'" y="'+(H-8)+'" text-anchor="middle" font-size="11" fill="var(--mute)">Retire (year '+T+')</text><text x="'+(W-pr)+'" y="'+(H-8)+'" text-anchor="end" font-size="11" fill="var(--mute)">Year '+(T+L)+'</text></svg>';
+saveState();
+}
 initTheme();
+loadState();
 prevStart=v("start");
 prevAcct=$("acct").value;
 basisFollowsStart=sameNum(v("basis"),v("start"));
